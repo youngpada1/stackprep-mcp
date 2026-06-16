@@ -109,12 +109,11 @@ export STACKPREP_MODEL="google/gemini-2.5-pro"
 
 | Tool | Description | Args |
 |---|---|---|
-| `start_session` | Start a new stackprep session. | `mode`, `cert_name`, `cv`, `jd`, `extra_topics` |
-| `next_question` | Generate the next question for a session. | `session_id` |
-| `submit_answer` | Submit an answer to the current question and receive scoring. | `session_id`, `answer` |
-| `flag_for_study` | Manually flag the last question for the study pack. | `session_id` |
-| `end_session` | End the session and receive a final study plan. Study pack is always offered. | `session_id` |
-| `save_study_pack` | Generate and save a named study pack to disk. | `session_id`, `name`, `extra_topics` |
+| `start_session` | Start a new stackprep session. Returns a session ID and the skill rules for the AI to follow. | `mode`, `cert_name`, `cv`, `jd`, `extra_topics` |
+| `submit_answer` | Record the result of an answered question. | `session_id`, `result`, `question` |
+| `flag_for_study` | Manually flag the current question for the study pack. | `session_id`, `question` |
+| `end_session` | End the session. Returns the score and flagged topics so the AI can generate a study plan and study pack. | `session_id` |
+| `save_study_pack` | Save the study pack content to disk. | `session_id`, `name`, `content` |
 | `list_study_packs` | List all saved study packs. |  |
 | `load_study_pack` | Load a previously saved study pack by name. | `name` |
 

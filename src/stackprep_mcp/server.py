@@ -4,23 +4,19 @@ import json
 import os
 import re
 import secrets
-import textwrap
 from pathlib import Path
 from typing import Any
 
-import httpx
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("stackprep")
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = os.environ.get("STACKPREP_MODEL", "anthropic/claude-sonnet-4.5")
 SKILLS_DIR = Path(__file__).parent / "skills"
 
 _sessions: dict[str, dict[str, Any]] = {}
 
 
-# ── Storage helpers ────────────────────────────────────────────────────────────
+# ── Storage ────────────────────────────────────────────────────────────────────
 
 def _data_dir() -> Path:
     env = os.environ.get("STACKPREP_PACKS_DIR")
@@ -43,8 +39,7 @@ def _sessions_dir() -> Path:
 
 def _persist_session(session_id: str) -> None:
     path = _sessions_dir() / f"{session_id}.json"
-    session = _sessions[session_id]
-    path.write_text(json.dumps(session, indent=2, ensure_ascii=False), encoding="utf-8")
+    path.write_text(json.dumps(_sessions[session_id], indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def _restore_session(session_id: str) -> dict | None:
@@ -69,90 +64,20 @@ def _load_skill(mode: str) -> str:
     skill_file = SKILLS_DIR / f"{mode}.md"
     if skill_file.exists():
         return skill_file.read_text(encoding="utf-8")
-    return _fallback_prompt()
-
-
-def _fallback_prompt() -> str:
-    return """You are an expert technical interviewer and certification coach delivering
-questions ONE AT A TIME in an interactive session.
-
-Each turn you will either:
-1. Receive "NEXT_QUESTION" — generate exactly ONE new question.
-2. Receive the user's answer — score it immediately.
-
-Scoring format:
-RESULT: ✅ Correct  OR  RESULT: ⚠️ Partial  OR  RESULT: ❌ Incorrect
-EXPLANATION: <2 sentences max>
-DOCS: <Title>: <url>
-"""
-
-
-# ── LLM call ───────────────────────────────────────────────────────────────────
-
-async def _call_llm(messages: list[dict], system: str) -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        raise ValueError("OPENROUTER_API_KEY environment variable is not set.")
-
-    payload = {
-        "model": DEFAULT_MODEL,
-        "max_tokens": 2048,
-        "messages": [{"role": "system", "content": system}] + messages,
-    }
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/youngpada1/stackprep",
-        "X-Title": "stackprep-mcp",
-    }
-    async with httpx.AsyncClient(timeout=120) as client:
-        r = await client.post(OPENROUTER_URL, json=payload, headers=headers)
-        r.raise_for_status()
-        data = r.json()
-        return data["choices"][0]["message"]["content"]
-
-
-# ── Session init helpers ───────────────────────────────────────────────────────
-
-def _build_initial_message(
-    mode: str, cert_name: str, cv: str, jd: str, extra_topics: str
-) -> str:
-    extra = f"\n\nExtra topics to focus on: {extra_topics}" if extra_topics else ""
-    if mode == "certification":
-        return textwrap.dedent(f"""
-            The user wants to prepare for the following certification exam:
-
-            {cert_name}{extra}
-
-            Use the LATEST official exam guide, domains, and weighting for this certification.
-            If official documentation is sparse, draw from community exam reports (Reddit, Discord, LinkedIn).
-            Do NOT ask for a CV or job description — this is pure exam prep.
-            Give a 2-line summary of the exam structure and key domains, then stop.
-        """).strip()
-    else:
-        return textwrap.dedent(f"""
-            Analyse the CV and job description below. Give a 3-line analysis
-            (seniority level, key domains, top skill gaps), then stop.
-
-            --- CV ---
-            {cv}
-
-            --- Job description ---
-            {jd}{extra}
-        """).strip()
+    return ""
 
 
 # ── Tools ──────────────────────────────────────────────────────────────────────
 
 @mcp.tool()
-async def start_session(
+def start_session(
     mode: str,
     cert_name: str = "",
     cv: str = "",
     jd: str = "",
     extra_topics: str = "",
 ) -> str:
-    """Start a new stackprep session.
+    """Start a new stackprep session. Returns a session ID and the skill rules for the AI to follow.
 
     Args:
         mode: "interview" or "certification"
@@ -169,115 +94,101 @@ async def start_session(
         return "ERROR: cv and jd are required for interview mode"
 
     session_id = secrets.token_hex(6)
-    system = _load_skill(mode)
-    initial_msg = _build_initial_message(mode, cert_name, cv, jd, extra_topics)
-
-    messages: list[dict] = [{"role": "user", "content": initial_msg}]
-    analysis = await _call_llm(messages, system)
-    messages.append({"role": "assistant", "content": analysis})
 
     _sessions[session_id] = {
         "mode": mode,
-        "messages": messages,
+        "cert_name": cert_name,
+        "extra_topics": extra_topics,
         "q_num": 0,
-        "score": {"correct": 0, "total": 0},
-        "flagged": [],
+        "score": {"correct": 0, "partial": 0, "incorrect": 0, "total": 0},
         "auto_flagged": [],
-        "last_question": "",
+        "flagged": [],
         "ended": False,
         "all_flagged": [],
     }
     _persist_session(session_id)
 
-    return f"Session started. ID: {session_id}\n\n{analysis}"
+    skill = _load_skill(mode)
+    context_lines = [f"Session ID: {session_id}", f"Mode: {mode}"]
+    if cert_name:
+        context_lines.append(f"Certification: {cert_name}")
+    if extra_topics:
+        context_lines.append(f"Extra topics: {extra_topics}")
+    if cv:
+        context_lines.append(f"\n--- CV ---\n{cv}")
+    if jd:
+        context_lines.append(f"\n--- Job description ---\n{jd}")
+
+    return "\n".join([
+        "=== STACKPREP SESSION STARTED ===",
+        "\n".join(context_lines),
+        "\n=== SKILL RULES (follow these exactly) ===",
+        skill,
+    ])
 
 
 @mcp.tool()
-async def next_question(session_id: str) -> str:
-    """Generate the next question for a session.
-
-    Args:
-        session_id: The session ID returned by start_session
-    """
-    session = _sessions.get(session_id) or _restore_session(session_id)
-    if not session:
-        return f"ERROR: No session found with ID '{session_id}'. Call start_session first."
-
-    session["q_num"] += 1
-    msgs = session["messages"]
-    msgs.append({"role": "user", "content": "NEXT_QUESTION"})
-
-    system = _load_skill(session["mode"])
-    question = await _call_llm(msgs, system)
-    msgs.append({"role": "assistant", "content": question})
-    session["last_question"] = question
-    _persist_session(session_id)
-
-    return f"Q{session['q_num']}:\n\n{question}"
-
-
-@mcp.tool()
-async def submit_answer(session_id: str, answer: str) -> str:
-    """Submit an answer to the current question and receive scoring.
+def submit_answer(session_id: str, result: str, question: str = "") -> str:
+    """Record the result of an answered question.
 
     Args:
         session_id: The session ID
-        answer: The user's answer (letter for cert mode, free text for interview mode)
+        result: "correct", "partial", or "incorrect"
+        question: The question text (used to build the study pack)
     """
     session = _sessions.get(session_id) or _restore_session(session_id)
     if not session:
         return f"ERROR: No session found with ID '{session_id}'."
-    if not session["last_question"]:
-        return "ERROR: No question has been asked yet. Call next_question first."
 
-    msgs = session["messages"]
-    msgs.append({"role": "user", "content": f"My answer: {answer}"})
+    result = result.lower().strip()
+    if result not in ("correct", "partial", "incorrect"):
+        return "ERROR: result must be 'correct', 'partial', or 'incorrect'"
 
-    system = _load_skill(session["mode"])
-    result = await _call_llm(msgs, system)
-    msgs.append({"role": "assistant", "content": result})
-
+    session["q_num"] += 1
     session["score"]["total"] += 1
     q_num = session["q_num"]
-    snippet = session["last_question"][:200]
+    snippet = question[:200] if question else f"Q{q_num}"
 
-    if "RESULT: ✅" in result:
+    if result == "correct":
         session["score"]["correct"] += 1
-    elif "RESULT: ⚠️" in result:
+    elif result == "partial":
+        session["score"]["partial"] += 1
         session["score"]["correct"] += 1
         session["auto_flagged"].append(f"Q{q_num}: {snippet}")
-    elif "RESULT: ❌" in result:
+    elif result == "incorrect":
+        session["score"]["incorrect"] += 1
         session["auto_flagged"].append(f"Q{q_num}: {snippet}")
 
     _persist_session(session_id)
 
     score = session["score"]
-    return f"{result}\n\nScore so far: {score['correct']}/{score['total']}"
+    return f"Recorded Q{q_num}: {result}. Score: {score['correct']}/{score['total']}"
 
 
 @mcp.tool()
-async def flag_for_study(session_id: str) -> str:
-    """Manually flag the last question for the study pack.
+def flag_for_study(session_id: str, question: str = "") -> str:
+    """Manually flag the current question for the study pack.
 
     Args:
         session_id: The session ID
+        question: The question text to flag
     """
     session = _sessions.get(session_id) or _restore_session(session_id)
     if not session:
         return f"ERROR: No session found with ID '{session_id}'."
 
     q_num = session["q_num"]
-    snippet = session["last_question"][:200]
+    snippet = question[:200] if question else f"Q{q_num}"
     entry = f"Q{q_num}: {snippet}"
     if entry not in session["flagged"]:
         session["flagged"].append(entry)
     _persist_session(session_id)
-    return f"Flagged Q{q_num} for study. Total manually flagged: {len(session['flagged'])}."
+    return f"Flagged Q{q_num} for study. Total flagged: {len(session['flagged'])}."
 
 
 @mcp.tool()
-async def end_session(session_id: str) -> str:
-    """End the session and receive a final study plan. Study pack is always offered.
+def end_session(session_id: str) -> str:
+    """End the session. Returns the score and flagged topics so the AI can generate a study plan and study pack.
 
     Args:
         session_id: The session ID
@@ -285,53 +196,37 @@ async def end_session(session_id: str) -> str:
     session = _sessions.get(session_id) or _restore_session(session_id)
     if not session:
         return f"ERROR: No session found with ID '{session_id}'."
-
-    msgs = session["messages"]
-    msgs.append({
-        "role": "user",
-        "content": (
-            "I'm done for today. Please give me a final Study Plan:\n"
-            "- Topics mastered (≥ 80% correct)\n"
-            "- Topics to review (50–79%)\n"
-            "- Topics to focus on (< 50%)\n"
-            "- 3–5 concrete study actions per weak area."
-        ),
-    })
-    system = _load_skill(session["mode"])
-    plan = await _call_llm(msgs, system)
-    score = session["score"]
 
     all_flagged = list(dict.fromkeys(session["auto_flagged"] + session["flagged"]))
     session["ended"] = True
     session["all_flagged"] = all_flagged
     _persist_session(session_id)
 
-    if all_flagged:
-        topics_preview = "\n".join(f"  • {t[:80]}" for t in all_flagged)
-        pack_prompt = (
-            f"\n\n---\n\n**Study pack** — {len(all_flagged)} topic(s) auto-detected:\n"
-            f"{topics_preview}\n\n"
-            "Want to add any extra topics? "
-            "Call `save_study_pack` with a name (e.g. `aws-saa-week1`) and optional `extra_topics` to generate and save it."
-        )
-    else:
-        pack_prompt = (
-            "\n\n---\n\n**Study pack** — You answered everything correctly! "
-            "A study pack is still available to reinforce these topics. "
-            "Call `save_study_pack` with a name to generate and save it."
-        )
+    score = session["score"]
+    topics_list = "\n".join(f"  • {t}" for t in all_flagged) if all_flagged else "  (none — full score!)"
 
-    return f"{plan}\n\nFinal score: {score['correct']}/{score['total']}{pack_prompt}"
+    return "\n".join([
+        "=== SESSION ENDED ===",
+        f"Score: {score['correct']}/{score['total']} "
+        f"({score['incorrect']} incorrect, {score['partial']} partial)",
+        "",
+        "Auto-detected study topics:",
+        topics_list,
+        "",
+        "Generate a Study Plan now (see skill rules), then ask the user:",
+        '  "Want to add any extra topics to your study pack before I save it?"',
+        f"Then call save_study_pack(session_id='{session_id}', name=<chosen name>, content=<generated pack>)",
+    ])
 
 
 @mcp.tool()
-async def save_study_pack(session_id: str, name: str, extra_topics: str = "") -> str:
-    """Generate and save a named study pack to disk.
+def save_study_pack(session_id: str, name: str, content: str) -> str:
+    """Save the study pack content to disk.
 
     Args:
-        session_id: The session ID (call end_session first)
+        session_id: The session ID (must have called end_session first)
         name: Slug name for this pack, e.g. "aws-saa-week1" or "python-interview-june"
-        extra_topics: Optional comma-separated extra topics to include beyond auto-detected ones
+        content: The full study pack markdown generated by the AI
     """
     session = _sessions.get(session_id) or _restore_session(session_id)
     if not session:
@@ -343,40 +238,6 @@ async def save_study_pack(session_id: str, name: str, extra_topics: str = "") ->
     if not safe_name:
         return "ERROR: Pack name must contain at least one letter or number."
 
-    all_flagged = session.get("all_flagged", [])
-    extras = [t.strip() for t in extra_topics.split(",") if t.strip()] if extra_topics else []
-
-    topic_parts: list[str] = []
-    if all_flagged:
-        topic_parts.append("Topics from session:\n" + "\n".join(f"- {t}" for t in all_flagged))
-    if extras:
-        topic_parts.append("Extra topics:\n" + "\n".join(f"- {t}" for t in extras))
-    if not topic_parts:
-        topic_parts.append("General review of all topics covered in this session.")
-
-    prompt = (
-        "Generate a Study Pack for the following topics. "
-        "Return a JSON block (```json ... ```) then a human-readable markdown summary.\n\n"
-        + "\n\n".join(topic_parts)
-        + "\n\nJSON schema (array of topics):\n"
-        '[{"topic":"","official_docs":[{"title":"","url":""}],'
-        '"videos":[{"title":"","url":""}],'
-        '"exam_prep":[{"title":"","url":""}],'
-        '"summary":""}]\n\n'
-        "Use only real, publicly accessible URLs. Never fabricate links."
-    )
-
-    system = _load_skill(session["mode"])
-    raw = await _call_llm([{"role": "user", "content": prompt}], system)
-
-    json_match = re.search(r"```json\s*(.*?)\s*```", raw, re.DOTALL)
-    topics_json: list[dict] = []
-    if json_match:
-        try:
-            topics_json = json.loads(json_match.group(1))
-        except json.JSONDecodeError:
-            pass
-
     packs = _packs_dir()
     pack_json_path = packs / f"{safe_name}.json"
     pack_md_path = packs / f"{safe_name}.md"
@@ -385,24 +246,23 @@ async def save_study_pack(session_id: str, name: str, extra_topics: str = "") ->
         "name": safe_name,
         "mode": session["mode"],
         "score": session["score"],
-        "topics": topics_json,
-        "raw_markdown": raw,
+        "topics": session.get("all_flagged", []),
+        "raw_markdown": content,
     }
     pack_json_path.write_text(json.dumps(pack_data, indent=2, ensure_ascii=False), encoding="utf-8")
-    pack_md_path.write_text(f"# Study Pack: {safe_name}\n\n{raw}", encoding="utf-8")
+    pack_md_path.write_text(f"# Study Pack: {safe_name}\n\n{content}", encoding="utf-8")
 
     _delete_session(session_id)
 
     return (
         f"Study pack '{safe_name}' saved.\n"
         f"  JSON → {pack_json_path}\n"
-        f"  Markdown → {pack_md_path}\n\n"
-        f"{raw}"
+        f"  Markdown → {pack_md_path}"
     )
 
 
 @mcp.tool()
-async def list_study_packs() -> str:
+def list_study_packs() -> str:
     """List all saved study packs."""
     packs = _packs_dir()
     files = sorted(packs.glob("*.json"))
@@ -422,7 +282,7 @@ async def list_study_packs() -> str:
 
 
 @mcp.tool()
-async def load_study_pack(name: str) -> str:
+def load_study_pack(name: str) -> str:
     """Load a previously saved study pack by name.
 
     Args:

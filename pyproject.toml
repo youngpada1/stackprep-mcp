@@ -5,7 +5,6 @@ description = "stackprep as an MCP server — interview & certification prep for
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]>=1.0.0",
-    "httpx>=0.27.0",
 ]
 
 [project.scripts]
