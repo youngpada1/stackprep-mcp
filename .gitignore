@@ -1,9 +1,22 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
+.venv/
 dist/
 build/
-.venv/
-.env
-*.env
+
+# Cache files (from CLI version)
+.cv_cache.txt
+.jd_cache.txt
+.cert_cache.txt
+
+# Local study packs and sessions (stored in ~/.stackprep by default)
 study_later/
+
+# Env
+.env
+.env.*
+
+# macOS
+.DS_Store
