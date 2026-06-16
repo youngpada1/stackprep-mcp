@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "stackprep": {
-      "command": "uv",
-      "args": ["run", "--directory", "/Users/youngpadawan/Dev/stackprep-mcp/stackprep-mcp", "stackprep-mcp"]
+      "command": "uvx",
+      "args": ["stackprep-mcp"]
     }
   }
 }

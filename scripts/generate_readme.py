@@ -68,7 +68,9 @@ def generate() -> str:
 
 > {meta["description"]}
 
-Works with any MCP-compatible client: **Claude Code**, **Cursor**, **Cline**, **Windsurf**, **Continue.dev**, **Codex CLI**, and more. No API key required — your existing AI subscription does the work.
+Works with **any MCP-compatible client** — Claude Code, Cursor, Cline, Windsurf, Continue.dev, Codex CLI, and any other client that supports the Model Context Protocol. No API key required — your existing AI subscription does the work.
+
+Available on PyPI: `uvx stackprep-mcp`
 
 ---
 
@@ -86,19 +88,17 @@ stackprep-mcp is a pure state-management MCP server. It tracks your session and 
 
 ## Install
 
-Clone the repo and install dependencies with `uv`:
-
 ```bash
-git clone https://github.com/youngpada1/stackprep-mcp
-cd stackprep-mcp
-uv sync
+uvx stackprep-mcp
 ```
 
-> Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+.
+> Requires [uv](https://docs.astral.sh/uv/). Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 
 ---
 
 ## Configure your MCP client
+
+The config is the same for every client — just point to `uvx stackprep-mcp`.
 
 ### Claude Code
 
@@ -108,8 +108,8 @@ Create `.mcp.json` in your project root:
 {{
   "mcpServers": {{
     "stackprep": {{
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/stackprep-mcp", "stackprep-mcp"]
+      "command": "uvx",
+      "args": ["stackprep-mcp"]
     }}
   }}
 }}
@@ -123,8 +123,8 @@ Create `~/.cursor/mcp.json`:
 {{
   "mcpServers": {{
     "stackprep": {{
-      "command": "uv",
-      "args": ["run", "--directory", "/path/to/stackprep-mcp", "stackprep-mcp"]
+      "command": "uvx",
+      "args": ["stackprep-mcp"]
     }}
   }}
 }}
@@ -139,15 +139,27 @@ Add to `~/.codex/config.yaml`:
 ```yaml
 mcpServers:
   stackprep:
-    command: uv
+    command: uvx
     args:
-      - run
-      - --directory
-      - /path/to/stackprep-mcp
       - stackprep-mcp
 ```
 
-Replace `/path/to/stackprep-mcp` with the absolute path to the cloned repo.
+### Any other MCP-compatible client
+
+The pattern is always the same:
+
+```json
+{{
+  "mcpServers": {{
+    "stackprep": {{
+      "command": "uvx",
+      "args": ["stackprep-mcp"]
+    }}
+  }}
+}}
+```
+
+Paste this into whatever config format your client uses (Cline, Windsurf, Continue.dev, etc.).
 
 ---
 
