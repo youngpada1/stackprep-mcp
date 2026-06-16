@@ -2,60 +2,92 @@
 
 > stackprep as an MCP server — interview & certification prep for any AI client
 
-Works with any MCP-compatible client: **Claude Desktop**, **Cursor**, **Cline**, **Windsurf**, **Continue.dev**, and more.
+Works with any MCP-compatible client: **Claude Code**, **Cursor**, **Cline**, **Windsurf**, **Continue.dev**, **Codex CLI**, and more. No API key required — your existing AI subscription does the work.
 
 ---
 
 ## What it does
 
-stackprep-mcp is an MCP server that turns any AI client into an adaptive technical interview and certification prep coach.
+stackprep-mcp is a pure state-management MCP server. It tracks your session and study packs on disk; your AI client (Claude, Cursor, Codex, etc.) handles all the question generation and scoring logic using the skill rules returned at session start.
 
 - One question at a time — interview or certification mode
 - Instant scoring with doc links after every answer
-- Auto-detects wrong answers and builds a named study pack
-- Study packs saved to disk — resume tomorrow, sync via iCloud
+- Auto-detects wrong/partial answers and builds a named study pack
+- Sessions and study packs saved to disk — resume anytime, sync via iCloud
+- Resume in-progress sessions across conversations or devices
 
 ---
 
 ## Install
 
-```bash
-uvx stackprep-mcp
-```
-
-Or with pip:
+Clone the repo and install dependencies with `uv`:
 
 ```bash
-pip install stackprep-mcp
+git clone https://github.com/youngpada1/stackprep-mcp
+cd stackprep-mcp
+uv sync
 ```
+
+> Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+.
 
 ---
 
 ## Configure your MCP client
 
-Add to your client's MCP config (e.g. `~/.claude/mcp.json` for Claude Desktop, `.cursor/mcp.json` for Cursor):
+### Claude Code
+
+Create `.mcp.json` in your project root:
 
 ```json
 {
   "mcpServers": {
     "stackprep": {
-      "command": "uvx",
-      "args": ["stackprep-mcp"],
-      "env": {
-        "OPENROUTER_API_KEY": "sk-or-v1-..."
-      }
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/stackprep-mcp", "stackprep-mcp"]
     }
   }
 }
 ```
 
-Get a free OpenRouter API key at [openrouter.ai](https://openrouter.ai).
+### Cursor
+
+Create `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "stackprep": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/stackprep-mcp", "stackprep-mcp"]
+    }
+  }
+}
+```
+
+Then open Cursor → **Cmd+Shift+J** → MCP tab — stackprep should appear with a green dot.
+
+### Codex CLI
+
+Add to `~/.codex/config.yaml`:
+
+```yaml
+mcpServers:
+  stackprep:
+    command: uv
+    args:
+      - run
+      - --directory
+      - /path/to/stackprep-mcp
+      - stackprep-mcp
+```
+
+Replace `/path/to/stackprep-mcp` with the absolute path to the cloned repo.
 
 ---
 
 ## Study pack storage
 
-Study packs are saved to `~/.stackprep/packs/` by default.
+Study packs and sessions are saved to `~/.stackprep/` by default.
 
 **Sync across devices with iCloud** (recommended on macOS):
 
@@ -80,19 +112,7 @@ Point this at any Dropbox, Google Drive, or OneDrive folder for cross-platform s
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | — | Required. Your OpenRouter API key. |
-| `STACKPREP_MODEL` | `anthropic/claude-sonnet-4.5` | Any model slug supported by OpenRouter. |
 | `STACKPREP_PACKS_DIR` | `~/.stackprep` | Root directory for packs and sessions. |
-
-**Switch model:**
-
-```bash
-# Use GPT-4o
-export STACKPREP_MODEL="openai/gpt-4o"
-
-# Use Gemini 2.5 Pro
-export STACKPREP_MODEL="google/gemini-2.5-pro"
-```
 
 ---
 
@@ -125,25 +145,33 @@ export STACKPREP_MODEL="google/gemini-2.5-pro"
 
 **Certification:**
 ```
-start_session(mode="certification", cert_name="AWS SAA-C03")
-→ next_question(session_id)
-→ submit_answer(session_id, answer="b")
+list_sessions()                                          ← always called first
+→ start_session(mode="certification", cert_name="AWS SAA-C03")
+→ [AI generates questions one at a time]
+→ submit_answer(session_id, result="correct"|"partial"|"incorrect", question="...")
 → ... repeat ...
 → end_session(session_id)
-→ save_study_pack(session_id, name="aws-saa-week1")
+→ save_study_pack(session_id, name="aws-saa-week1", content="...")
 ```
 
 **Interview:**
 ```
-start_session(mode="interview", cv="...", jd="...")
-→ next_question(session_id)
-→ submit_answer(session_id, answer="A cache-aside pattern means...")
+list_sessions()                                          ← always called first
+→ start_session(mode="interview", cv="...", jd="...")
+→ [AI generates questions one at a time]
+→ submit_answer(session_id, result="correct"|"partial"|"incorrect", question="...")
 → ... repeat ...
 → end_session(session_id)
-→ save_study_pack(session_id, name="python-interview-june")
+→ save_study_pack(session_id, name="python-interview-june", content="...")
 ```
 
-**Coming back tomorrow:**
+**Resuming a session:**
+```
+list_sessions()                → shows in-progress sessions
+→ resume_session(session_id)  → loads state + skill rules, continues where you left off
+```
+
+**Loading a saved study pack:**
 ```
 list_study_packs()
 → load_study_pack(name="aws-saa-week1")
@@ -153,7 +181,7 @@ list_study_packs()
 
 ## Session persistence
 
-Active sessions are saved to disk automatically. If your MCP client restarts or you switch devices (with iCloud sync enabled), the session is restored when you next call `next_question` or `submit_answer` with the same session ID.
+Every session is saved to disk on every update. At the start of each new conversation the AI automatically calls `list_sessions` and asks whether you want to resume an in-progress session or start a new one. Sessions are stored in `~/.stackprep/sessions/` (or your custom `STACKPREP_PACKS_DIR`).
 
 ---
 
@@ -180,7 +208,7 @@ uv run stackprep-mcp
 ```
 
 The README is auto-generated from `server.py` tool definitions and the skills files in `src/stackprep_mcp/skills/`.
-To update the README manually at any time:
+To regenerate manually:
 
 ```bash
 uv run python scripts/generate_readme.py
