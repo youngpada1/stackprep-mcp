@@ -15,32 +15,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Bump patch version in pyproject.toml
+      - name: Get version from pyproject.toml
         id: version
         run: |
-          CURRENT=$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          NEW="$MAJOR.$MINOR.$((PATCH + 1))"
-          sed -i "s/^version = \"$CURRENT\"/version = \"$NEW\"/" pyproject.toml
-          echo "VERSION=$NEW" >> $GITHUB_OUTPUT
+          echo "VERSION=$(grep '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_OUTPUT
 
-      - name: Commit and tag new version
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.VERSION }}" | grep -q .; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Tag version
+        if: steps.tag_check.outputs.EXISTS == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml
-          git commit -m "chore: bump version to ${{ steps.version.outputs.VERSION }}"
           git tag "v${{ steps.version.outputs.VERSION }}"
-          git push origin main --follow-tags
+          git push origin "v${{ steps.version.outputs.VERSION }}"
 
       - name: Install uv
+        if: steps.tag_check.outputs.EXISTS == 'false'
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Build
+        if: steps.tag_check.outputs.EXISTS == 'false'
         run: uv build
 
       - name: Publish to PyPI
+        if: steps.tag_check.outputs.EXISTS == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
