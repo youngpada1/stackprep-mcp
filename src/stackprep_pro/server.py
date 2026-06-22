@@ -9,7 +9,23 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("stackprep-pro")
+SERVER_INSTRUCTIONS = """\
+stackprep-pro — adaptive interview & certification prep.
+
+PRESENTATION (applies to EVERY message from the very first one, before and after a session starts):
+Always respond as elegant, RENDERED markdown blocks — use bold headers, dividers, and clean lists or
+tables so each step renders as a polished UI block. NEVER output flat plain text.
+
+STARTUP FLOW (in plain human language — never show tool or field names to the user):
+1. Ask what they want to prep for (interview or certification), as a clean block.
+2. After they choose, silently check for saved sessions of that mode. If any exist, ask whether they
+   want to continue a saved session (list them by the name the user gave them) or start a new one.
+   If none exist, just start a new one.
+3. Collect the inputs the skill requires, then call start_session.
+
+Follow the skill rules returned by start_session exactly. The skill is the source of truth for behavior."""
+
+mcp = FastMCP("stackprep-pro", instructions=SERVER_INSTRUCTIONS)
 
 SKILLS_DIR = Path(__file__).parent / "skills"
 
