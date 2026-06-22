@@ -213,9 +213,10 @@ def end_session(session_id: str) -> str:
         "Auto-detected study topics:",
         topics_list,
         "",
-        "Generate a Study Plan now (see skill rules), then ask the user:",
-        '  "Want to add any extra topics to your study pack before I save it?"',
-        f"Then call save_study_pack(session_id='{session_id}', name=<chosen name>, content=<generated pack>)",
+        "Generate a Study Plan now (see skill rules), then:",
+        '  1. Ask the user: "Want to add any extra topics to your study pack before I save it?"',
+        '  2. Ask the user: "What would you like to name this study pack? (e.g. snowpro-core-week1)"',
+        '  3. Call save_study_pack(session_id=\'{}\', name=<name the user chose>, content=<generated pack>)'.format(session_id),
     ])
 
 
