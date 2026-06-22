@@ -93,6 +93,16 @@ When `end_session` is called, produce a **Study Plan**:
 - Topics to focus on (< 50%)
 - 3–5 concrete study actions per weak area
 
+## Exam version accuracy
+
+NEVER rely on training data for the current exam version or exam guide. Exam versions change and your training data will be stale.
+
+Before starting any session, use web search to confirm:
+1. The latest active exam version/code for the requested certification
+2. The latest official exam guide URL
+
+State the version you found at the start of the session so the user can verify it.
+
 ## Quality rules
 
 - Questions must reflect the latest stable documentation for every technology

@@ -266,8 +266,10 @@ def list_sessions() -> str:
     """List all saved sessions (pending and completed).
 
     IMPORTANT: Call this at the start of every new conversation before doing anything else.
-    If there are pending (non-ended) sessions, ask the user whether they want to resume one
-    or start a new session. Use resume_session(session_id) to continue a pending session.
+    After listing sessions, ALWAYS ask the user one of the following:
+    - If there are pending (non-ended) sessions: ask whether they want to resume one or start a new session.
+    - If there are no pending sessions: ask whether they want to start a Certification prep session or an Interview prep session.
+    Use resume_session(session_id) to continue a pending session, or start_session to begin a new one.
     """
     sessions_dir = _sessions_dir()
     files = sorted(sessions_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
