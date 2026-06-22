@@ -279,7 +279,8 @@ def end_session(session_id: str) -> str:
     all_flagged = list(dict.fromkeys(session["auto_flagged"] + session["flagged"]))
     session["ended"] = True
     session["all_flagged"] = all_flagged
-    _persist_session(session_id)
+    # Do NOT auto-save the session here. It is only saved if the user explicitly
+    # chooses to, via save_session (with a name they provide).
 
     score = session["score"]
     topics_list = "\n".join(f"  • {t}" for t in all_flagged) if all_flagged else "  (none — full score!)"
@@ -293,13 +294,13 @@ def end_session(session_id: str) -> str:
         topics_list,
         "",
         "Now (this flow is identical for interview and certification mode):",
-        '  1. Ask the user: "Do you want to save a study pack from this session? (y/n)"',
-        "  2. If NO: stop here. Nothing is saved.",
+        '  1. Ask the user: "Do you want to save this session? (y/n)"',
+        "  2. If NO: stop here. Do NOT save anything — nothing is persisted.",
         "  3. If YES:",
-        '       a. Ask: "Want to add any extra topics to your study pack before I save it?"',
-        '       b. Ask: "What would you like to name this study pack? (e.g. snowpro-core-week1)"',
-        "       c. Generate the Study Plan and study pack (see skill rules).",
-        "       d. Call save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>)".format(session_id),
+        '       a. Ask: "What would you like to name this session?" — the user MUST provide a name; never auto-generate one.',
+        "       b. Call save_session(session_id='{}', session_name=<name the user chose>)".format(session_id),
+        '       c. Then ask: "Do you want a study pack from this session too? (y/n)" — if yes, generate it and call'
+        " save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>).".format(session_id),
     ])
 
 
