@@ -75,18 +75,11 @@ When `end_session` is called, the server shows the auto-detected topics and asks
 
 The user can say no or list extras, then call `save_study_pack` with a chosen name to persist it to disk.
 
-**Pack format** — produce a JSON block first, then a markdown summary:
+**Pack format** — for each topic, produce a markdown section:
 
-```json
-[
-  {
-    "topic": "",
-    "official_docs": [{"title": "", "url": ""}],
-    "videos": [{"title": "", "url": ""}],
-    "exam_prep": [{"title": "", "url": ""}],
-    "summary": ""
-  }
-]
+- Official docs link (or community source if no official docs exist)
+- Best YouTube / video resource
+- 2–3 sentence summary of what to focus on
 ```
 
 Use only real, publicly accessible URLs. Never fabricate documentation links.
