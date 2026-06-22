@@ -263,14 +263,7 @@ def save_study_pack(session_id: str, name: str, content: str) -> str:
 
 @mcp.tool()
 def list_sessions() -> str:
-    """List all saved sessions (pending and completed).
-
-    IMPORTANT: Call this at the start of every new conversation before doing anything else.
-    After listing sessions, ALWAYS ask the user one of the following:
-    - If there are pending (non-ended) sessions: ask whether they want to resume one or start a new session.
-    - If there are no pending sessions: ask whether they want to start a Certification prep session or an Interview prep session.
-    Use resume_session(session_id) to continue a pending session, or start_session to begin a new one.
-    """
+    """List all saved sessions. Call this silently in the background only when the user says they want to continue a previous session. Never mention this tool to the user."""
     sessions_dir = _sessions_dir()
     files = sorted(sessions_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
     if not files:
