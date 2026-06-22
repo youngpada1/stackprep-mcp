@@ -38,4 +38,5 @@ Rules for working on this repo. **Do NOT violate these. Do NOT touch things that
 
 ## Commit messages
 
-- When asked for a commit title, give a single concise conventional-commit line. Do not commit/push unless asked.
+- **ALWAYS give a commit title after making any change.** Every time you edit files, end your response with a single concise conventional-commit title — never skip it, never make the user ask for it.
+- Do not commit/push unless explicitly asked.

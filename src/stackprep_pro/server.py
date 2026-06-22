@@ -80,7 +80,7 @@ def start_session(
     """Start a new stackprep session. Returns a session ID and the skill rules for the AI to follow.
 
     STARTUP FLOW (follow exactly, in plain language — never show tool or field names to the user):
-    1. First ask: "Are you prepping for a technical interview or a certification exam?"
+    1. First ask the user, in plain language, what they want to prep for (e.g. "What would you like to prep for?") and let them indicate interview or certification.
     2. After they choose, check for saved sessions of that mode (call list_sessions silently).
        - If matching saved sessions exist, ask: "Do you want to continue a saved session or start a new one?"
          and list the saved sessions by the name the user gave them.

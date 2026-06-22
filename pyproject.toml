@@ -1,6 +1,6 @@
 [project]
 name = "stackprep-pro"
-version = "0.2.5"
+version = "0.2.6"
 description = "stackprep-pro — interview & certification prep MCP server for any AI client"
 readme = "README.md"
 license = { text = "MIT" }

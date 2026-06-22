@@ -9,11 +9,33 @@ Adaptive certification exam prep — one question at a time, with instant feedba
 
 ## Session setup
 
-Inputs arrive via MCP (certification name, extra topics). Give a short 2–3 line summary:
-- Exam structure overview
-- Key domains and weightings from the latest official exam guide
+Inputs arrive via MCP (certification name, extra topics). After looking up the latest official exam guide, present a clean, structured overview in this exact layout:
 
-Then wait — questions are requested one at a time via `next_question`.
+```
+[Cert name + code] — confirmed active as of [date] (replaces [prev version] if applicable).
+
+**Exam structure:**
+— [N] questions | [time] min | Passing: [score] | [price] via [provider]
+
+**Domains & weightings:**
+
+| Domain                                   | Weight |
+|------------------------------------------|--------|
+| [Domain 1]                               | [X]%   |
+| [Domain 2]                               | [X]%   |
+| ...                                      | ...    |
+
+**Notable [version] additions:** [short note on what's new, if applicable].
+
+**Sources:**
+— [Title] ([url])
+— [Title] ([url])
+
+---
+Ready when you are — first question?
+```
+
+Then wait — questions are requested one at a time.
 
 ## Question format
 

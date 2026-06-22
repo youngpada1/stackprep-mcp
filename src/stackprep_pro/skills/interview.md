@@ -9,12 +9,29 @@ Adaptive technical interview prep — one question at a time, with instant feedb
 
 ## Session setup
 
-Inputs arrive via MCP (CV, job description, extra topics). Give a short 2–3 line summary:
-- Seniority level inferred from CV
-- Key domains
-- Top skill gaps vs. the job description
+Inputs arrive via MCP (CV, job description, extra topics). After analysing the CV and JD, present a clean, structured overview in this exact layout:
 
-Then wait — questions are requested one at a time via `next_question`.
+```
+[Role / target position] — [seniority level inferred from CV].
+
+**Interview focus:**
+— Based on your CV vs. the job description
+
+**Domains & focus:**
+
+| Domain                                   | Focus  |
+|------------------------------------------|--------|
+| [Domain 1]                               | [High/Med/Low] |
+| [Domain 2]                               | [High/Med/Low] |
+| ...                                      | ...    |
+
+**Top skill gaps vs. the JD:** [short note on the biggest gaps to drill].
+
+---
+Ready when you are — first question?
+```
+
+Then wait — questions are requested one at a time.
 
 ## Question format
 
