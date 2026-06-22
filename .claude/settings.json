@@ -4,5 +4,12 @@
       "command": "uvx",
       "args": ["stackprep-pro"]
     }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__stackprep",
+      "WebFetch",
+      "WebSearch"
+    ]
   }
 }
