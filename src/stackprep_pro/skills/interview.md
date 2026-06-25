@@ -7,6 +7,19 @@ description: Interview prep skill for the stackprep-pro MCP server. Activated wh
 
 Adaptive technical interview prep — one question at a time, with instant feedback and doc links.
 
+## ⛔ EXIT RULE (READ FIRST — NEVER SKIP)
+
+The instant the user says ANYTHING meaning they want to stop — "exit", "quit", "stop", "leave", "X",
+"done for now", "bye", "that's enough" — you MUST NOT just end the conversation. You MUST first ask:
+
+> "Do you want to save this session so you can continue later? (y/n)"
+
+- **Yes** → ask "What would you like to name this session?" (the user MUST give the name — never invent one),
+  then call `save_session(session_id, session_name=<that name>)`. It stays resumable under that name.
+- **No** → only then end, saving nothing.
+
+This is mandatory EVERY time, no matter how few questions were answered.
+
 ## Session setup
 
 Inputs arrive via MCP (CV, job description, extra topics). After analysing the CV and JD, present a clean, structured overview in this exact layout:
