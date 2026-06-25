@@ -374,7 +374,8 @@ def save_study_pack(session_id: str, name: str, content: str) -> str:
     pack_json_path.write_text(json.dumps(pack_data, indent=2, ensure_ascii=False), encoding="utf-8")
     pack_md_path.write_text(f"# Study Pack: {safe_name}\n\n{content}", encoding="utf-8")
 
-    _delete_session(session_id)
+    # Do NOT delete/end the session here — saving a study pack mid-session must keep
+    # the session alive so the user can continue.
 
     return (
         f"Study pack '{safe_name}' saved.\n"
