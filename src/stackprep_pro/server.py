@@ -166,6 +166,8 @@ def start_session(
     _sessions[session_id] = {
         "mode": mode,
         "cert_name": cert_name,
+        "cv": cv,
+        "jd": jd,
         "session_name": "",
         "extra_topics": extra_topics,
         "q_num": 0,
@@ -459,6 +461,12 @@ def resume_session(session_id: str) -> str:
     ]
     if cert:
         context_lines.append(f"Certification: {cert}")
+    cv = session.get("cv", "")
+    jd = session.get("jd", "")
+    if cv:
+        context_lines.append(f"\n--- CV ---\n{cv}")
+    if jd:
+        context_lines.append(f"\n--- Job description ---\n{jd}")
     context_lines += [
         f"Questions answered so far: {q_num}",
         f"Score so far: {score['correct']}/{score['total']} "

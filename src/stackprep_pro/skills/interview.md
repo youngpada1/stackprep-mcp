@@ -22,6 +22,13 @@ This is mandatory EVERY time, no matter how few questions were answered.
 
 ## Session setup
 
+When starting a NEW interview session, first check (silently, via list_sessions) whether the user has a
+previously saved interview session. If so, ask: "Do you want to reuse the same CV and job description from a
+previous session, or provide new ones?" If they reuse, take the CV and JD from that saved session and pass
+them to start_session unchanged. Otherwise ask for the new CV and JD.
+
+The CV and JD are stored on the session, so a resumed session keeps the exact same CV and JD.
+
 Inputs arrive via MCP (CV, job description, extra topics). After analysing the CV and JD, present a clean, structured overview in this exact layout:
 
 ```
