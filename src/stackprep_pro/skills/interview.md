@@ -90,8 +90,10 @@ After scoring, ask:
 
 Handling the reply:
 - **Y** → next question.
-- **S** → the user is DONE and wants a study pack. Call `end_session` and follow its returned flow
-  (generate study plan, name the study pack, save_study_pack). This marks the session finished.
+- **S** → the user wants to save a study pack, but this does NOT end the session. Generate the study plan,
+  ask the user to name the study pack, then call `save_study_pack` (do NOT call `end_session`). After saving,
+  ask: "Study pack saved! Do you want to continue this session or exit? (continue / exit)" — if continue, go
+  to the next question; if exit, follow the exit rule above.
 - **X — or ANY exit intent: "exit", "quit", "stop", "leave", "I'm done for now", "bye", etc.** → the user
   wants to PAUSE and resume later. You MUST, before ending, ask "Do you want to save this session to continue
   later? (y/n)". If yes, ask "What would you like to name this session?" — the user MUST name it (never
