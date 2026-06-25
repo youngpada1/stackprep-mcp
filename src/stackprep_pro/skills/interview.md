@@ -16,7 +16,7 @@ The instant the user says ANYTHING meaning they want to stop — "exit", "quit",
 
 - **Yes** → ask "What would you like to name this session?" (the user MUST give the name — never invent one),
   then call `save_session(session_id, session_name=<that name>)`. It stays resumable under that name.
-- **No** → only then end, saving nothing.
+- **No** → call `discard_session(session_id)` to permanently delete it, then end. It will NOT appear later.
 
 This is mandatory EVERY time, no matter how few questions were answered.
 

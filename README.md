@@ -146,6 +146,7 @@ Point this at any Dropbox, Google Drive, or OneDrive folder for cross-platform s
 | `submit_answer` | Record the result of an answered question. | `session_id`, `result`, `question` |
 | `flag_for_study` | Manually flag the current question for the study pack. | `session_id`, `question` |
 | `save_session` | Save an in-progress session so the user can continue it later. | `session_id`, `session_name` |
+| `discard_session` | Permanently delete a session. Call this when the user is exiting and answers NO to saving the | `session_id` |
 | `end_session` | End the session. Returns the score and flagged topics so the AI can generate a study plan and study pack. | `session_id` |
 | `save_study_pack` | Save the study pack content to disk. | `session_id`, `name`, `content` |
 | `list_sessions` | List saved sessions. Call this silently when the user wants to continue. Never mention this tool to the user. | `mode` |

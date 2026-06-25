@@ -294,6 +294,18 @@ def save_session(session_id: str, session_name: str) -> str:
 
 
 @mcp.tool()
+def discard_session(session_id: str) -> str:
+    """Permanently delete a session. Call this when the user is exiting and answers NO to saving the
+    session — it removes the session file from disk so it does NOT appear in the continue list later.
+
+    Args:
+        session_id: The session ID to delete
+    """
+    _delete_session(session_id)
+    return "Session discarded. Nothing was saved."
+
+
+@mcp.tool()
 def end_session(session_id: str) -> str:
     """End the session. Returns the score and flagged topics so the AI can generate a study plan and study pack.
 
@@ -391,6 +403,10 @@ def list_sessions(mode: str = "") -> str:
         except Exception:
             continue
         if mode and data.get("mode", "") != mode:
+            continue
+        # Only show sessions the user explicitly saved (named). Unnamed auto-persisted
+        # sessions are not surfaced unless the user named them via save_session.
+        if not data.get("session_name", "").strip():
             continue
         rows.append((f.stem, data))
 
