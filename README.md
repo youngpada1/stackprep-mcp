@@ -148,9 +148,9 @@ Point this at any Dropbox, Google Drive, or OneDrive folder for cross-platform s
 | `save_session` | Save an in-progress session so the user can continue it later. | `session_id`, `session_name` |
 | `end_session` | End the session. Returns the score and flagged topics so the AI can generate a study plan and study pack. | `session_id` |
 | `save_study_pack` | Save the study pack content to disk. | `session_id`, `name`, `content` |
-| `list_sessions` | List all saved sessions. Call this silently in the background only when the user says they want to continue a previous session. Never mention this tool to the user. |  |
+| `list_sessions` | List saved sessions. Call this silently when the user wants to continue. Never mention this tool to the user. | `mode` |
 | `resume_session` | Resume a previously saved session. Returns full session state and skill rules. | `session_id` |
-| `list_study_packs` | List all saved study packs. Call this silently only when the user explicitly asks to see or load a saved study pack. Never call this on startup or automatically. Never mention this tool to the user. |  |
+| `list_study_packs` | List saved study packs. Call this silently when the user wants to see or load a study pack. Never mention this tool to the user. | `mode` |
 | `load_study_pack` | Load a previously saved study pack by name. | `name` |
 
 ---

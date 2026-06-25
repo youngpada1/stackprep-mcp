@@ -18,8 +18,11 @@ user VERBATIM (it is already formatted as an elegant block — do not rephrase o
 PRESENTATION (every message): always respond as elegant RENDERED markdown blocks — bold headers,
 dividers, clean tables/lists. NEVER output flat plain text.
 
-After the user picks a mode, silently check for saved sessions of that mode; if any exist offer to
-continue one (by the name the user gave it) or start new. Then collect inputs and call start_session.
+After the user picks a mode, silently call BOTH list_sessions(mode=<chosen mode>) and
+list_study_packs(mode=<chosen mode>). Show the user, as elegant blocks for that mode:
+  - their saved sessions they can continue (by the name they gave each), and
+  - their saved study packs they can open (by name).
+Then they can continue a session, open a study pack, or start new. Collect inputs and call start_session.
 Follow the skill rules returned by start_session exactly — the skill is the source of truth."""
 
 # Hardcoded so the very first block is guaranteed, not AI-guessed.
@@ -42,9 +45,34 @@ _sessions: dict[str, dict[str, Any]] = {}
 
 # ── Storage ────────────────────────────────────────────────────────────────────
 
+def _detect_cloud_dir() -> Path | None:
+    """Return a cloud-synced folder if one exists on this machine, else None.
+
+    Checks common consumer cloud sync roots (iCloud Drive, Dropbox, Google Drive,
+    OneDrive). The first one found is used so sessions/packs sync automatically with
+    no setup. Falls back to local storage when none are present.
+    """
+    home = Path.home()
+    candidates = [
+        home / "Library" / "Mobile Documents" / "com~apple~CloudDocs",  # iCloud Drive (macOS)
+        home / "Dropbox",
+        home / "Google Drive",
+        home / "My Drive",
+        home / "OneDrive",
+    ]
+    for base in candidates:
+        if base.is_dir():
+            return base / "stackprep"
+    return None
+
+
 def _data_dir() -> Path:
     env = os.environ.get("STACKPREP_PACKS_DIR")
-    d = Path(env) if env else Path.home() / ".stackprep"
+    if env:
+        d = Path(env)
+    else:
+        # Auto-use a cloud-synced folder if available, else fall back to local.
+        d = _detect_cloud_dir() or (Path.home() / ".stackprep")
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -286,21 +314,24 @@ def end_session(session_id: str) -> str:
     topics_list = "\n".join(f"  • {t}" for t in all_flagged) if all_flagged else "  (none — full score!)"
 
     return "\n".join([
-        "=== SESSION ENDED ===",
+        "=== SESSION FINISHED ===",
         f"Score: {score['correct']}/{score['total']} "
         f"({score['incorrect']} incorrect, {score['partial']} partial)",
         "",
         "Auto-detected study topics:",
         topics_list,
         "",
+        "IMPORTANT: end_session is ONLY for finishing a session. It marks the session COMPLETED, so it can NO",
+        "longer be resumed. If the user wanted to PAUSE and continue later, do NOT call end_session — call",
+        "save_session instead (it keeps the session resumable).",
+        "",
         "Now (this flow is identical for interview and certification mode):",
-        '  1. Ask the user: "Do you want to save this session? (y/n)"',
-        "  2. If NO: stop here. Do NOT save anything — nothing is persisted.",
+        '  1. Ask the user: "Do you want a study pack from this finished session? (y/n)"',
+        "  2. If NO: stop here. Nothing else is saved.",
         "  3. If YES:",
-        '       a. Ask: "What would you like to name this session?" — the user MUST provide a name; never auto-generate one.',
-        "       b. Call save_session(session_id='{}', session_name=<name the user chose>)".format(session_id),
-        '       c. Then ask: "Do you want a study pack from this session too? (y/n)" — if yes, generate it and call'
-        " save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>).".format(session_id),
+        '       a. Ask: "What would you like to name this study pack? (e.g. snowpro-core-week1)"',
+        "       b. Generate the Study Plan and study pack (see skill rules), then call",
+        "          save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>).".format(session_id),
     ])
 
 
@@ -347,37 +378,45 @@ def save_study_pack(session_id: str, name: str, content: str) -> str:
 
 
 @mcp.tool()
-def list_sessions() -> str:
-    """List all saved sessions. Call this silently in the background only when the user says they want to continue a previous session. Never mention this tool to the user."""
+def list_sessions(mode: str = "") -> str:
+    """List saved sessions. Call this silently when the user wants to continue. Never mention this tool to the user.
+
+    Args:
+        mode: Optional — "interview" or "certification" to show only that mode's sessions.
+              Leave empty to show all. After the user picks a mode, pass it here.
+    """
     sessions_dir = _sessions_dir()
     files = sorted(sessions_dir.glob("*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
-    if not files:
-        return "No saved sessions found. Use start_session to begin."
 
-    lines = [f"Saved sessions ({len(files)}):\n"]
+    rows = []
     for f in files:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            session_id = f.stem
-            mode = data.get("mode", "?")
-            cert = data.get("cert_name", "")
-            name = data.get("session_name", "")
-            score = data.get("score", {})
-            ended = data.get("ended", False)
-            status = "completed" if ended else "IN PROGRESS"
-            # Prefer the user-given session name; fall back to mode/cert if unnamed.
-            label = name or (f"{mode}" + (f" — {cert}" if cert else ""))
-            lines.append(
-                f"  • {session_id}  [{label}]  "
-                f"score: {score.get('correct','?')}/{score.get('total','?')}  [{status}]"
-            )
         except Exception:
-            lines.append(f"  • {f.stem}  [unreadable]")
+            continue
+        if mode and data.get("mode", "") != mode:
+            continue
+        rows.append((f.stem, data))
 
-    pending = sum(
-        1 for f in files
-        if not json.loads(f.read_text(encoding="utf-8")).get("ended", False)
-    )
+    if not rows:
+        return "No saved sessions found. Use start_session to begin."
+
+    lines = [f"Saved sessions ({len(rows)}):\n"]
+    for session_id, data in rows:
+        s_mode = data.get("mode", "?")
+        cert = data.get("cert_name", "")
+        name = data.get("session_name", "")
+        score = data.get("score", {})
+        ended = data.get("ended", False)
+        status = "completed" if ended else "IN PROGRESS"
+        # Prefer the user-given session name; fall back to mode/cert if unnamed.
+        label = name or (f"{s_mode}" + (f" — {cert}" if cert else ""))
+        lines.append(
+            f"  • {session_id}  [{label}]  "
+            f"score: {score.get('correct','?')}/{score.get('total','?')}  [{status}]"
+        )
+
+    pending = sum(1 for _, data in rows if not data.get("ended", False))
     if pending:
         lines.append(f"\n{pending} session(s) in progress — use resume_session(session_id) to continue one.")
     return "\n".join(lines)
@@ -428,22 +467,34 @@ def resume_session(session_id: str) -> str:
 
 
 @mcp.tool()
-def list_study_packs() -> str:
-    """List all saved study packs. Call this silently only when the user explicitly asks to see or load a saved study pack. Never call this on startup or automatically. Never mention this tool to the user."""
+def list_study_packs(mode: str = "") -> str:
+    """List saved study packs. Call this silently when the user wants to see or load a study pack. Never mention this tool to the user.
+
+    Args:
+        mode: Optional — "interview" or "certification" to show only that mode's packs.
+              Leave empty to show all. After the user picks a mode, pass it here.
+    """
     packs = _packs_dir()
     files = sorted(packs.glob("*.json"))
-    if not files:
-        return f"No study packs saved yet. Packs are stored in: {packs}"
 
-    lines = [f"Saved study packs ({len(files)}) — {packs}\n"]
+    rows = []
     for f in files:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            mode = data.get("mode", "?")
-            score = data.get("score", {})
-            lines.append(f"  • {f.stem}  [{mode}]  score: {score.get('correct','?')}/{score.get('total','?')}")
         except Exception:
-            lines.append(f"  • {f.stem}")
+            continue
+        if mode and data.get("mode", "") != mode:
+            continue
+        rows.append((f.stem, data))
+
+    if not rows:
+        return f"No study packs saved yet. Packs are stored in: {packs}"
+
+    lines = [f"Saved study packs ({len(rows)}) — {packs}\n"]
+    for name, data in rows:
+        p_mode = data.get("mode", "?")
+        score = data.get("score", {})
+        lines.append(f"  • {name}  [{p_mode}]  score: {score.get('correct','?')}/{score.get('total','?')}")
     return "\n".join(lines)
 
 
