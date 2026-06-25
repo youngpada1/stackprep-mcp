@@ -307,31 +307,27 @@ def end_session(session_id: str) -> str:
     all_flagged = list(dict.fromkeys(session["auto_flagged"] + session["flagged"]))
     session["ended"] = True
     session["all_flagged"] = all_flagged
-    # Do NOT auto-save the session here. It is only saved if the user explicitly
-    # chooses to, via save_session (with a name they provide).
+    _persist_session(session_id)
 
     score = session["score"]
     topics_list = "\n".join(f"  • {t}" for t in all_flagged) if all_flagged else "  (none — full score!)"
 
     return "\n".join([
-        "=== SESSION FINISHED ===",
+        "=== SESSION ENDED ===",
         f"Score: {score['correct']}/{score['total']} "
         f"({score['incorrect']} incorrect, {score['partial']} partial)",
         "",
         "Auto-detected study topics:",
         topics_list,
         "",
-        "IMPORTANT: end_session is ONLY for finishing a session. It marks the session COMPLETED, so it can NO",
-        "longer be resumed. If the user wanted to PAUSE and continue later, do NOT call end_session — call",
-        "save_session instead (it keeps the session resumable).",
+        "This is the STUDY PACK path (the user pressed S / is DONE with the questions and wants a study pack to",
+        "prepare for their weak points later). This is DIFFERENT from saving a session to resume — that is",
+        "save_session (the X path), and is NOT done here.",
         "",
-        "Now (this flow is identical for interview and certification mode):",
-        '  1. Ask the user: "Do you want a study pack from this finished session? (y/n)"',
-        "  2. If NO: stop here. Nothing else is saved.",
-        "  3. If YES:",
-        '       a. Ask: "What would you like to name this study pack? (e.g. snowpro-core-week1)"',
-        "       b. Generate the Study Plan and study pack (see skill rules), then call",
-        "          save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>).".format(session_id),
+        "Now (identical for interview and certification mode):",
+        '  1. Generate a Study Plan (see skill rules), then ask: "Want to add any extra topics before I save the study pack?"',
+        '  2. Ask: "What would you like to name this study pack? (e.g. snowpro-core-week1)"',
+        "  3. Call save_study_pack(session_id='{}', name=<pack name the user chose>, content=<generated pack>).".format(session_id),
     ])
 
 
