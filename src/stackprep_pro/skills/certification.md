@@ -78,10 +78,12 @@ Handling the reply:
 - **Y** → next question.
 - **S** → the user is DONE and wants a study pack. Call `end_session` and follow its returned flow
   (generate study plan, name the study pack, save_study_pack). This marks the session finished.
-- **X** → the user wants to PAUSE and resume later. Ask "Do you want to save this session to continue
+- **X — or ANY exit intent: "exit", "quit", "stop", "leave", "I'm done for now", "bye", etc.** → the user
+  wants to PAUSE and resume later. You MUST, before ending, ask "Do you want to save this session to continue
   later? (y/n)". If yes, ask "What would you like to name this session?" — the user MUST name it (never
   auto-generate) — then call `save_session` with that name. The session stays RESUMABLE and appears later
-  in the continue list under that name. If no, just exit without saving.
+  in the continue list under that name. If no, just exit without saving. NEVER end the conversation on an
+  exit intent without asking this save question first.
 
 ## Adaptive difficulty
 
