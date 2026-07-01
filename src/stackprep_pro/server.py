@@ -297,6 +297,33 @@ def save_session(session_id: str, session_name: str) -> str:
 
 
 @mcp.tool()
+def exit_session(session_id: str) -> str:
+    """ALWAYS call this the moment the user wants to leave a session in progress — any of: "exit", "quit",
+    "stop", "leave", "X", "done for now", "bye", "that's enough". Do NOT end the conversation yourself on an
+    exit intent; call this first and relay its instructions. It returns the exact save prompt to show.
+
+    Args:
+        session_id: The session ID
+    """
+    session = _sessions.get(session_id) or _restore_session(session_id)
+    if not session:
+        return f"ERROR: No session found with ID '{session_id}'."
+
+    score = session.get("score", {})
+    return "\n".join([
+        "=== EXIT REQUESTED — you MUST ask this before ending ===",
+        f"Progress so far: {score.get('correct','?')}/{score.get('total','?')}.",
+        "",
+        'Ask the user, exactly: "Do you want to save this session so you can continue later? (y/n)"',
+        "  - If YES: ask \"What would you like to name this session?\" (the user MUST provide the name — never",
+        "    auto-generate). Then call save_session(session_id='{}', session_name=<name>). It stays resumable.".format(session_id),
+        "  - If NO: call discard_session(session_id='{}'). It is permanently deleted and won't appear later.".format(session_id),
+        "",
+        "Do NOT skip this question. Do NOT end the conversation until the user has answered y or n.",
+    ])
+
+
+@mcp.tool()
 def discard_session(session_id: str) -> str:
     """Permanently delete a session. Call this when the user is exiting and answers NO to saving the
     session — it removes the session file from disk so it does NOT appear in the continue list later.

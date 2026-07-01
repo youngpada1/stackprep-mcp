@@ -10,7 +10,8 @@ Adaptive technical interview prep — one question at a time, with instant feedb
 ## ⛔ EXIT RULE (READ FIRST — NEVER SKIP)
 
 The instant the user says ANYTHING meaning they want to stop — "exit", "quit", "stop", "leave", "X",
-"done for now", "bye", "that's enough" — you MUST NOT just end the conversation. You MUST first ask:
+"done for now", "bye", "that's enough" — you MUST NOT just end the conversation. You MUST FIRST call the
+`exit_session(session_id)` tool and follow the instructions it returns. Those instructions are:
 
 > "Do you want to save this session so you can continue later? (y/n)"
 
@@ -18,7 +19,7 @@ The instant the user says ANYTHING meaning they want to stop — "exit", "quit",
   then call `save_session(session_id, session_name=<that name>)`. It stays resumable under that name.
 - **No** → call `discard_session(session_id)` to permanently delete it, then end. It will NOT appear later.
 
-This is mandatory EVERY time, no matter how few questions were answered.
+This is mandatory EVERY time, no matter how few questions were answered. Never skip calling `exit_session`.
 
 ## Session setup
 
